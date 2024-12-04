@@ -1084,7 +1084,7 @@ files = [
 ]
 
 [package.dependencies]
-nvidia-nvjitlink-cu12 = "*"
+nvidia-nvjitlink-cu12 = "12.4.127"
 
 [[package]]
 name = "nvidia-curand-cu12"
