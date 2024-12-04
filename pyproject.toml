@@ -2,7 +2,7 @@
 name = "Testing"
 version = "0.1.0"
 description = "Description of your project"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Your Name"]
 license = "MIT"
 readme = "README.md"
 homepage = "https://yourprojecthomepage.com"
