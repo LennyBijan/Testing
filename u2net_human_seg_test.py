@@ -29,26 +29,31 @@ def normPRED(d):
 
     return dn
 
-def save_output(image_name,pred,d_dir):
-
+def save_output(image_name, pred, d_dir):
     predict = pred
     predict = predict.squeeze()
     predict_np = predict.cpu().data.numpy()
 
-    im = Image.fromarray(predict_np*255).convert('RGB')
-    img_name = image_name.split(os.sep)[-1]
-    image = io.imread(image_name)
-    imo = im.resize((image.shape[1],image.shape[0]),resample=Image.BILINEAR)
+    # Normalize the image to 0-255
+    im = Image.fromarray((predict_np * 255).astype(np.uint8))
 
-    pb_np = np.array(imo)
+    # Crop the image to remove blank space
+    bbox = im.getbbox()  # Get bounding box of non-zero regions
+    if bbox:
+        im = im.crop(bbox)
 
-    aaa = img_name.split(".")
-    bbb = aaa[0:-1]
-    imidx = bbb[0]
-    for i in range(1,len(bbb)):
-        imidx = imidx + "." + bbb[i]
+    # Resize to 64x64 while preserving aspect ratio
+    im = im.resize((64, 64), resample=Image.BILINEAR)
 
-    imo.save(d_dir+imidx+'.png')
+    # Prepare file name
+    img_name = os.path.basename(image_name)
+    imidx, _ = os.path.splitext(img_name)
+
+    # Save the image
+    if not os.path.exists(d_dir):
+        os.makedirs(d_dir, exist_ok=True)
+    im.save(os.path.join(d_dir, f"{imidx}.png"))
+
 
 def main():
 
