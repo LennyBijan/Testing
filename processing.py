@@ -14,7 +14,7 @@ from tqdm import tqdm
 import json
 
 def imgs2pickle(img_groups: Tuple, output_path: Path, img_size: int = 64, verbose: bool = False, dataset='CASIAB') -> None:
-    """Reads a group of images and saves the data in pickle format.
+    """Reads a group of images and saves the data in pickle format and as individual resized and cropped images.
 
     Args:
         img_groups (Tuple): Tuple of (sid, seq, view) and list of image paths.
@@ -41,14 +41,17 @@ def imgs2pickle(img_groups: Tuple, output_path: Path, img_size: int = 64, verbos
             logging.warning(f'{img_file} has no data.')
             continue
 
+        # Crop blank space
         y_sum = img.sum(axis=1)
         y_top = (y_sum != 0).argmax(axis=0)
         y_btm = (y_sum != 0).cumsum(axis=0).argmax(axis=0)
         img = img[y_top: y_btm + 1, :]
 
+        # Resize while maintaining aspect ratio
         ratio = img.shape[1] / img.shape[0]
         img = cv2.resize(img, (int(img_size * ratio), img_size), interpolation=cv2.INTER_CUBIC)
 
+        # Center cropping
         x_csum = img.sum(axis=0).cumsum()
         x_center = None
         for idx, csum in enumerate(x_csum):
@@ -69,8 +72,15 @@ def imgs2pickle(img_groups: Tuple, output_path: Path, img_size: int = 64, verbos
             _ = np.zeros((img.shape[0], half_width))
             img = np.concatenate([_, img, _], axis=1)
 
-        to_pickle.append(img[:, left: right].astype('uint8'))
+        cropped_img = img[:, left: right].astype('uint8')
+        to_pickle.append(cropped_img)
 
+        # Save the resized and cropped image as a file
+        image_save_path = os.path.join(output_path, *sinfo, f"{Path(img_file).stem}_cropped.png")
+        os.makedirs(os.path.dirname(image_save_path), exist_ok=True)
+        cv2.imwrite(image_save_path, cropped_img)
+
+    # Save the images as a pickle file
     if to_pickle:
         to_pickle = np.asarray(to_pickle)
         dst_path = os.path.join(output_path, *sinfo)
@@ -85,34 +95,39 @@ def imgs2pickle(img_groups: Tuple, output_path: Path, img_size: int = 64, verbos
         logging.warning(f'{sinfo} has less than 5 valid data.')
 
 def pretreat(input_path: Path, output_path: Path, img_size: int = 64, workers: int = 4, verbose: bool = False, dataset: str = 'CASIAB') -> None:
-    """Reads a dataset and saves the data in pickle format.
+    """Reads a flat dataset of images and saves the data in pickle format and as processed images.
 
     Args:
-        input_path (Path): Dataset root path.
+        input_path (Path): Path containing raw image files.
         output_path (Path): Output path.
         img_size (int, optional): Image resizing size. Defaults to 64.
         workers (int, optional): Number of thread workers. Defaults to 4.
         verbose (bool, optional): Display debug info. Defaults to False.
     """
-    img_groups = defaultdict(list)
-    logging.info(f'Listing {input_path}')
-    total_files = 0
-    for img_path in input_path.rglob('*.png'):
-        if 'gei.png' in img_path.as_posix():
-            continue
-        if verbose:
-            logging.debug(f'Adding {img_path}')
-        *_, sid, seq, view, _ = img_path.as_posix().split('/')
-        img_groups[(sid, seq, view)].append(img_path)
-        total_files += 1
+    # Group all images together (single group)
+    img_paths = list(input_path.glob('*.png'))
+    if not img_paths:
+        logging.warning(f"No images found in {input_path}.")
+        return
 
-    logging.info(f'Total files listed: {total_files}')
+    logging.info(f'Total files found: {len(img_paths)}')
 
-    progress = tqdm(total=len(img_groups), desc='Pretreating', unit='folder')
+    img_groups = {('all', 'all', 'all'): img_paths}  # Treat all images as a single group
+
+    progress = tqdm(total=len(img_groups), desc='Pretreating', unit='group')
 
     with mp.Pool(workers) as pool:
         logging.info(f'Start pretreating {input_path}')
-        for _ in pool.imap_unordered(partial(imgs2pickle, output_path=output_path, img_size=img_size, verbose=verbose, dataset=dataset), img_groups.items()):
+        for _ in pool.imap_unordered(
+            partial(
+                imgs2pickle,
+                output_path=output_path,
+                img_size=img_size,
+                verbose=verbose,
+                dataset=dataset,
+            ),
+            img_groups.items(),
+        ):
             progress.update(1)
     logging.info('Done')
 

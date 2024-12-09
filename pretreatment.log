@@ -1,5 +1,4 @@
-[2024-12-05 21:03:08,857 - INFO]: Listing test_data/test_human_images_results
-[2024-12-05 21:03:08,858 - INFO]: Total files listed: 19
-[2024-12-05 21:03:08,867 - INFO]: Start pretreating test_data/test_human_images_results
-[2024-12-05 21:03:09,071 - INFO]: Saved 19 valid frames to processed_results/sid/seq/view/view.pkl.
-[2024-12-05 21:03:09,074 - INFO]: Done
+[2024-12-09 15:33:04,450 - INFO]: Total files found: 19
+[2024-12-09 15:33:04,458 - INFO]: Start pretreating test_data/test_human_images_results
+[2024-12-09 15:33:04,470 - INFO]: Saved 19 valid frames to processed_results/all/all/all/all.pkl.
+[2024-12-09 15:33:04,472 - INFO]: Done
